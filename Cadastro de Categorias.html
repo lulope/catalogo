@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro de Categorias</title>
+
+  <!-- Carregar a versão modular do Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+    import { getDatabase, ref, set, get, remove } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
+
+    // Configuração do Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyBlLB2K6Sj9kQ9pVAu7rt-Db0jsC-hyvmU",
+      authDomain: "applulope.firebaseapp.com",
+      databaseURL: "https://applulope-default-rtdb.firebaseio.com",
+      projectId: "applulope",
+      storageBucket: "applulope.appspot.com",
+      messagingSenderId: "327504288727",
+      appId: "1:327504288727:web:96e7bfc239cf9337c9c992",
+      measurementId: "G-KNTVRE6P08"
+    };
+
+    // Inicializar o Firebase
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+
+    // Função para remover os acentos e comparar as palavras sem considerar as diferenças de acentuação
+    function removeAcentos(str) {
+      return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
+    // Função de cálculo da distância de Levenshtein
+    function calcularDistanciaLevenshtein(a, b) {
+      const tmp = [];
+      for (let i = 0; i <= a.length; i++) {
+        tmp[i] = [i];
+      }
+
+      for (let j = 0; j <= b.length; j++) {
+        tmp[0][j] = j;
+      }
+
+      for (let i = 1; i <= a.length; i++) {
+        for (let j = 1; j <= b.length; j++) {
+          tmp[i][j] = a[i - 1] === b[j - 1] ? tmp[i - 1][j - 1] : Math.min(tmp[i - 1][j - 1] + 1, tmp[i][j - 1] + 1, tmp[i - 1][j] + 1);
+        }
+      }
+
+      return tmp[a.length][b.length];
+    }
+
+    // Função de envio do formulário
+    document.getElementById('category-form').addEventListener('submit', function(event) {
+      event.preventDefault(); // Evita o envio padrão do formulário
+
+      const categoryName = document.getElementById('category-name').value;
+      const normalizedCategoryName = removeAcentos(categoryName).toLowerCase();
+
+      // Referência para o nó de categorias
+      const categoryRef = ref(database, 'Produtos/Categorias');
+
+      // Verificar se a categoria já existe
+      get(categoryRef)
+        .then((snapshot) => {
+          let exists = false;
+          let similarCategories = [];
+
+          snapshot.forEach((childSnapshot) => {
+            const existingCategoryName = childSnapshot.key;
+            const normalizedExistingCategoryName = removeAcentos(existingCategoryName).toLowerCase();
+
+            if (normalizedExistingCategoryName === normalizedCategoryName) {
+              exists = true;
+            } else {
+              // Verificar a similaridade usando a distância de Levenshtein
+              const distancia = calcularDistanciaLevenshtein(normalizedCategoryName, normalizedExistingCategoryName);
+              if (distancia <= 3) { // Ajuste o valor conforme necessário
+                similarCategories.push(existingCategoryName);
+              }
+            }
+          });
+
+          if (exists) {
+            alert("Categoria já cadastrada. Por favor, escolha outro nome.");
+          } else if (similarCategories.length > 0) {
+            const similarMessage = "Este nome é muito similar a outras categorias já cadastradas: " + similarCategories.join(", ") + ".\nDeseja salvar mesmo assim?";
+            if (confirm(similarMessage)) {
+              // Salvar a categoria no Firebase
+              const newCategoryRef = ref(database, 'Produtos/Categorias/' + categoryName);
+              set(newCategoryRef, {
+                nome: categoryName
+              })
+              .then(() => {
+                alert("Categoria cadastrada com sucesso!");
+                document.getElementById('category-form').reset();
+                carregarCategorias(); // Atualizar a lista de categorias
+              })
+              .catch((error) => {
+                console.error("Erro ao salvar categoria: ", error);
+                alert("Erro ao salvar categoria!");
+              });
+            } else {
+              alert("A categoria não foi salva.");
+            }
+          } else {
+            // Salvar a categoria no Firebase
+            const newCategoryRef = ref(database, 'Produtos/Categorias/' + categoryName);
+            set(newCategoryRef, {
+              nome: categoryName
+            })
+            .then(() => {
+              alert("Categoria cadastrada com sucesso!");
+              document.getElementById('category-form').reset();
+              carregarCategorias(); // Atualizar a lista de categorias
+            })
+            .catch((error) => {
+              console.error("Erro ao salvar categoria: ", error);
+              alert("Erro ao salvar categoria!");
+            });
+          }
+        })
+        .catch((error) => {
+          console.error("Erro ao verificar categoria: ", error);
+          alert("Erro ao verificar categoria!");
+        });
+    });
+
+    // Função para carregar as categorias da Firebase e exibi-las na lista
+    function carregarCategorias() {
+      const categoryRef = ref(database, 'Produtos/Categorias');
+      get(categoryRef)
+        .then((snapshot) => {
+          const categoryList = document.getElementById('category-list');
+          categoryList.innerHTML = ''; // Limpar a lista antes de preencher novamente
+
+          snapshot.forEach((childSnapshot) => {
+            const categoryName = childSnapshot.key;
+            const listItem = document.createElement('div');
+            listItem.className = 'category-item';
+            listItem.innerHTML = `
+              <span>${categoryName}</span>
+              <button class="delete-btn" onclick="excluirCategoria('${categoryName}')">Excluir</button>
+            `;
+            categoryList.appendChild(listItem);
+          });
+        })
+        .catch((error) => {
+          console.error("Erro ao carregar categorias: ", error);
+          alert("Erro ao carregar categorias!");
+        });
+    }
+
+    // Função para excluir uma categoria
+    window.excluirCategoria = function(categoryName) {
+      if (confirm(`Tem certeza que deseja excluir a categoria "${categoryName}"?`)) {
+        const categoryRef = ref(database, 'Produtos/Categorias/' + categoryName);
+        remove(categoryRef)
+          .then(() => {
+            alert("Categoria excluída com sucesso!");
+            carregarCategorias(); // Atualizar a lista após a exclusão
+          })
+          .catch((error) => {
+            console.error("Erro ao excluir categoria: ", error);
+            alert("Erro ao excluir categoria!");
+          });
+      }
+    }
+
+    // Carregar as categorias quando a página for carregada
+    window.onload = carregarCategorias;
+  </script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f9;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      width: 80%;
+      max-width: 600px;
+      margin: 50px auto;
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    label {
+      font-size: 16px;
+      color: #555;
+      margin-bottom: 5px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    button {
+      padding: 12px 20px;
+      background-color: #4CAF50;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      width: 48%;
+    }
+
+    button.cancel {
+      background-color: #f44336;
+    }
+
+    .button-container {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .button-container button {
+      width: 48%;
+    }
+
+    /* Estilos para o botão "Voltar ao Menu" */
+    .back-to-menu {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      padding: 10px 20px;
+      background-color: #333;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .back-to-menu:hover {
+      background-color: #555;
+    }
+
+    /* Estilo do container da lista */
+    .category-list-container {
+      margin-top: 30px;
+      height: 200px;
+      overflow-y: auto;
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    /* Estilo dos itens da lista */
+    .category-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px;
+      background-color: #fff;
+      margin: 5px 0;
+      border-radius: 5px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .category-item button {
+      background-color: #f44336;
+      border: none;
+      color: #fff;
+      padding: 5px 10px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    .category-item button:hover {
+      background-color: #d32f2f;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Botão Voltar ao Menu -->
+  <a href="Menu.html" class="back-to-menu">Voltar ao Menu</a>
+
+  <div class="container">
+    <h1>Cadastro de Categorias</h1>
+    
+    <form id="category-form">
+      <div>
+        <label for="category-name">Nome da Categoria</label>
+        <input type="text" id="category-name" name="category-name" placeholder="Digite o nome da categoria" required>
+      </div>
+
+      <div class="button-container">
+        <button type="submit">Salvar Categoria</button>
+        <button type="button" class="cancel" onclick="window.history.back();">Cancelar</button>
+      </div>
+    </form>
+
+    <!-- Lista de categorias -->
+    <div class="category-list-container">
+      <h2>Lista de Categorias</h2>
+      <div id="category-list"></div>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Subcategoria</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            margin: 0;
+        }
+        .btn-voltar {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .form-container {
+            max-width: 400px;
+            margin: 50px auto 0; /* Adicionado espaçamento do topo para o botão não cobrir */
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        label {
+            display: block;
+            margin-bottom: 10px;
+        }
+        select, input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-save {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-cancel {
+            background-color: #dc3545;
+            color: white;
+        }
+        .subcategoria-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .btn-delete {
+            background-color: red;
+            color: white;
+            padding: 5px;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Botão fixo para voltar ao menu -->
+<button class="btn-voltar" onclick="voltarMenu()">⟵ Voltar ao Menu</button>
+
+<div class="form-container">
+    <h2>Cadastro de Subcategoria</h2>
+
+    <form id="subcategoriaForm">
+        <label for="categoria">Categoria</label>
+        <select id="categoria" name="categoria" onchange="buscarSubcategorias()">
+            <!-- Categorias serão carregadas aqui -->
+        </select>
+
+        <label for="subcategoria">Subcategoria</label>
+        <input type="text" id="subcategoria" name="subcategoria" required>
+
+        <div>
+            <button type="submit" class="btn btn-save">Salvar</button>
+            <button type="button" class="btn btn-cancel" onclick="voltarMenu()">Cancelar</button>
+        </div>
+    </form>
+
+    <h3>Subcategorias Cadastradas</h3>
+    <div id="listaSubcategorias">
+        <!-- Lista de subcategorias será exibida aqui -->
+    </div>
+</div>
+
+<script>
+// Função para buscar categorias no Firebase
+function buscarCategorias() {
+    const categoriasRef = firebase.database().ref('Produtos/Categorias');
+    categoriasRef.once('value', (snapshot) => {
+        const categorias = snapshot.val();
+        const selectCategoria = document.getElementById('categoria');
+        
+        selectCategoria.innerHTML = '<option value="">Selecione uma categoria</option>'; // Opção padrão
+        
+        for (let categoria in categorias) {
+            const option = document.createElement('option');
+            option.value = categoria;
+            option.textContent = categoria;
+            selectCategoria.appendChild(option);
+        }
+    });
+}
+
+// Função para buscar subcategorias ao selecionar uma categoria
+function buscarSubcategorias() {
+    const categoriaSelecionada = document.getElementById('categoria').value;
+    const listaSubcategorias = document.getElementById('listaSubcategorias');
+
+    listaSubcategorias.innerHTML = ""; // Limpa a lista antes de carregar
+
+    if (categoriaSelecionada) {
+        const subcategoriasRef = firebase.database().ref(`Produtos/Categorias/${categoriaSelecionada}/Subcategoria`);
+        
+        subcategoriasRef.once('value', (snapshot) => {
+            const subcategorias = snapshot.val();
+            
+            if (subcategorias) {
+                for (let key in subcategorias) {
+                    const subcategoriaNome = subcategorias[key].nome;
+                    
+                    const div = document.createElement('div');
+                    div.classList.add('subcategoria-item');
+                    div.innerHTML = `
+                        <span>${subcategoriaNome}</span>
+                        <button class="btn-delete" onclick="excluirSubcategoria('${categoriaSelecionada}', '${key}')">Excluir</button>
+                    `;
+                    listaSubcategorias.appendChild(div);
+                }
+            } else {
+                listaSubcategorias.innerHTML = "<p>Nenhuma subcategoria cadastrada.</p>";
+            }
+        });
+    }
+}
+
+// Função para salvar uma nova subcategoria
+document.getElementById('subcategoriaForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+    
+    const categoria = document.getElementById('categoria').value;
+    const subcategoria = document.getElementById('subcategoria').value;
+    
+    if (categoria && subcategoria) {
+        const subcategoriaRef = firebase.database().ref(`Produtos/Categorias/${categoria}/Subcategoria/${subcategoria}/nome`);
+        
+        subcategoriaRef.set(subcategoria).then(() => {
+            alert('Subcategoria salva com sucesso!');
+            document.getElementById('subcategoriaForm').reset();
+            buscarSubcategorias(); // Atualizar a lista
+        }).catch((error) => {
+            alert('Erro ao salvar subcategoria: ' + error.message);
+        });
+    }
+});
+
+// Função para excluir uma subcategoria
+function excluirSubcategoria(categoria, subcategoria) {
+    if (confirm(`Tem certeza que deseja excluir a subcategoria "${subcategoria}"?`)) {
+        const subcategoriaRef = firebase.database().ref(`Produtos/Categorias/${categoria}/Subcategoria/${subcategoria}`);
+
+        subcategoriaRef.remove().then(() => {
+            alert('Subcategoria excluída com sucesso!');
+            buscarSubcategorias(); // Atualizar a lista
+        }).catch((error) => {
+            alert('Erro ao excluir subcategoria: ' + error.message);
+        });
+    }
+}
+
+// Função para voltar ao menu
+function voltarMenu() {
+    window.location.href = "Menu.html";
+}
+
+// Chamar a função para buscar categorias ao carregar a página
+window.onload = function() {
+    buscarCategorias();
+}
+</script>
+
+<!-- Incluir Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script>
+// Configuração do Firebase
+const firebaseConfig = {
+    apiKey: "SUA_API_KEY",
+    authDomain: "seu-projeto-id.firebaseapp.com",
+    databaseURL: "https://applulope-default-rtdb.firebaseio.com",
+    projectId: "seu-projeto-id",
+    storageBucket: "seu-projeto-id.appspot.com",
+    messagingSenderId: "seu-id",
+    appId: "seu-app-id"
+};
+
+// Inicializar Firebase
+firebase.initializeApp(firebaseConfig);
+</script>
+
+</body>
+</html>
