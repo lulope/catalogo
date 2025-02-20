@@ -82,20 +82,17 @@
         if (produtos) {
           for (let spu in produtos) {
             let produto = produtos[spu];
-            // Só exibe se houver variações (SKU)
-            if (!produto.SKU) continue;
+            if (!produto.SKU) continue; // Exibe somente se houver variações
 
             let categoria = produto.Categoria || "";
             let subcategoria = produto.Subcategoria || "";
 
-            // Aplica os filtros
             if ((categoriaSelecionada && categoria !== categoriaSelecionada) ||
                 (subcategoriaSelecionada && subcategoria !== subcategoriaSelecionada) ||
                 (spuBusca && !spu.toLowerCase().includes(spuBusca))) {
               continue;
             }
 
-            // Se não houver subcategoria, exibe apenas "SPU | CATEGORIA"
             let headerText = `${spu} | ${categoria}`;
             if (subcategoria) headerText += ` | ${subcategoria}`;
 
@@ -152,34 +149,31 @@
     document.getElementById("subcategorias").addEventListener("change", carregarProdutos);
     document.getElementById("spuBusca").addEventListener("input", carregarProdutos);
 
-    // Função para abrir o modal com a imagem
+    // Abre o modal com a imagem, centralizando-a e resetando o zoom
     window.abrirImagem = function (imgElement) {
       const modal = document.getElementById("imageModal");
       const modalImg = document.getElementById("modalImg");
-      modal.style.display = "block"; // Exibe o modal (mais tarde alterado para flex se desejar)
+      modal.style.display = "block";
       modalImg.src = imgElement.src;
-      // Reseta o zoom
       modalImg.style.transform = "scale(1)";
       currentScale = 1;
     };
 
-    // Função para fechar o modal
+    // Fecha o modal
     window.fecharModal = function () {
       document.getElementById("imageModal").style.display = "none";
     };
 
-    // Função auxiliar para calcular a distância entre dois toques
     function getDistance(touch1, touch2) {
       const dx = touch2.clientX - touch1.clientX;
       const dy = touch2.clientY - touch1.clientY;
       return Math.sqrt(dx * dx + dy * dy);
     }
 
-    // Variáveis para controle do pinch-to-zoom
     let initialDistance = 0;
     let currentScale = 1;
 
-    // Adiciona eventos de toque para permitir o pinch-to-zoom na imagem do modal
+    // Permite pinch-to-zoom na imagem do modal
     function adicionarEventosPinch() {
       const modalImg = document.getElementById("modalImg");
       modalImg.addEventListener("touchstart", function(e) {
@@ -280,19 +274,18 @@
     }
     /* Modal de imagem */
     #imageModal {
-      display: none; /* Oculto inicialmente */
+      display: none;
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0, 0, 0, 0.8);
       overflow: auto;
     }
-    /* Container do modal centralizado */
+    /* Container do modal: centraliza o conteúdo */
     #modalContent {
       display: flex;
       justify-content: center;
       align-items: center;
-      width: 100%;
-      height: 100%;
+      min-height: 100%;
       position: relative;
     }
     #modalImg {
