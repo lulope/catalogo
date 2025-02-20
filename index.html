@@ -29,7 +29,7 @@
 
     // Variáveis para controle do zoom via botões e pinch-to-zoom
     let originalWidth = 0, originalHeight = 0;
-    let initialScale = 1; // Escala mínima (definida quando a imagem é carregada)
+    let initialScale = 1; // Escala mínima, definida no load da imagem
     let currentScale = 1;
     let initialDistance = 0;
 
@@ -150,7 +150,7 @@
       modalContent.style.marginLeft = marginLeft > 0 ? marginLeft + "px" : "0px";
     }
 
-    // Abre o modal com a imagem, centralizando-a
+    // Abre o modal com a imagem e centraliza-a
     window.abrirImagem = function (imgElement) {
       const modal = document.getElementById("imageModal");
       const modalImg = document.getElementById("modalImg");
@@ -165,7 +165,7 @@
         const scaleW = vw / originalWidth;
         const scaleH = vh / originalHeight;
         const initScale = Math.min(scaleW, scaleH, 1);
-        initialScale = initScale; // Define a escala mínima
+        initialScale = initScale; // Define a escala mínima (zoom inicial)
         currentScale = initScale;
         modalImg.style.width = (originalWidth * initScale) + "px";
         modalImg.style.height = (originalHeight * initScale) + "px";
@@ -201,6 +201,7 @@
           const scaleFactor = newDistance / initialDistance;
           let newScale = currentScale * scaleFactor;
           if (newScale < initialScale) newScale = initialScale;
+          if (newScale > initialScale * 6) newScale = initialScale * 6;
           modalImg.style.width = (originalWidth * newScale) + "px";
           modalImg.style.height = (originalHeight * newScale) + "px";
           updateModalImgPosition();
@@ -341,7 +342,7 @@
       gap: 10px;
       z-index: 1000;
     }
-    /* Botões de zoom com layout moderno (fundo azul) */
+    /* Botões de zoom modernos */
     #zoomContainer button {
       background-color: #007bff;
       color: #fff;
