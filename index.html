@@ -79,69 +79,94 @@
                 if (produtos) {
                     for (let spu in produtos) {
                         let produto = produtos[spu];
-                        let categoria = produto.Categoria || "Indefinida";
-                        let subcategoria = produto.Subcategoria || "Indefinida";
 
-                        if (produto.SKU) {
-                            if ((categoriaSelecionada === "" || categoria === categoriaSelecionada) &&
-                                (subcategoriaSelecionada === "" || subcategoria === subcategoriaSelecionada) &&
-                                (spuBusca === "" || spu.toLowerCase().includes(spuBusca))) {
+                        // Só exibe se houver variações (SKU)
+                        if (!produto.SKU) continue;
 
-                                let spuDiv = document.createElement("div");
-                                spuDiv.classList.add("spu");
-                                spuDiv.innerHTML = `
-                                    <h2>${spu} | ${categoria} | ${subcategoria}</h2>
-                                    <div class="sku-container">
-                                        <div class="sku-scroll"></div>
-                                    </div>
-                                `;
+                        let categoria = produto.Categoria || "";
+                        let subcategoria = produto.Subcategoria || "";
 
-                                let skuScroll = spuDiv.querySelector(".sku-scroll");
-
-                                for (let sku in produto.SKU) {
-                                    let skuData = produto.SKU[sku];
-                                    let valor = skuData.Valor ? `R$ ${skuData.Valor}` : "Indisponível";
-                                    let imagemPath = `CATÁLOGO/${sku}.jpg`;
-
-                                    let tamanhoInicial = skuData.Inicio || "Indefinido";
-                                    let tamanhoFinal = skuData.Fim || "Indefinido";
-                                    let grade = `${tamanhoInicial} ao ${tamanhoFinal}`;
-
-                                    let cor = skuData.Cor || "Indefinida";
-
-                                    let skuDiv = document.createElement("div");
-                                    skuDiv.classList.add("sku");
-                                    skuDiv.innerHTML = `
-                                        <h3>${sku}</h3>
-                                        <div class="img-container">
-                                            <img src="" id="img-${sku}" class="img-placeholder" alt="Imagem do Produto">
-                                        </div>
-                                        <p><strong>Cor:</strong> ${cor}</p>
-                                        <p><strong>Grade:</strong> ${grade}</p>
-                                        <p><strong>Preço:</strong> ${valor}</p>
-                                    `;
-                                    skuScroll.appendChild(skuDiv);
-
-                                    const imageRef = storageRef(storage, imagemPath);
-                                    getDownloadURL(imageRef)
-                                        .then((url) => {
-                                            document.getElementById(`img-${sku}`).src = url;
-                                        })
-                                        .catch(() => {
-                                            document.getElementById(`img-${sku}`).src = "caminho/para/imagem/fallback.jpg";
-                                        });
-                                }
-                                catalogoDiv.appendChild(spuDiv);
-                            }
+                        // Filtros
+                        if ((categoriaSelecionada && categoria !== categoriaSelecionada) ||
+                            (subcategoriaSelecionada && subcategoria !== subcategoriaSelecionada) ||
+                            (spuBusca && !spu.toLowerCase().includes(spuBusca))) {
+                            continue;
                         }
+
+                        // Monta o cabeçalho: se não houver subcategoria, exibe somente SPU | CATEGORIA
+                        let headerText = `${spu} | ${categoria}`;
+                        if (subcategoria) {
+                            headerText += ` | ${subcategoria}`;
+                        }
+
+                        let spuDiv = document.createElement("div");
+                        spuDiv.classList.add("spu");
+                        spuDiv.innerHTML = `<h2>${headerText}</h2>
+                            <div class="sku-container">
+                                <div class="sku-scroll"></div>
+                            </div>`;
+
+                        let skuScroll = spuDiv.querySelector(".sku-scroll");
+
+                        for (let sku in produto.SKU) {
+                            let skuData = produto.SKU[sku];
+                            let valor = skuData.Valor ? `R$ ${skuData.Valor}` : "Indisponível";
+                            let imagemPath = `CATÁLOGO/${sku}.jpg`;
+
+                            let tamanhoInicial = skuData.Inicio || "Indefinido";
+                            let tamanhoFinal = skuData.Fim || "Indefinido";
+                            let grade = `${tamanhoInicial} ao ${tamanhoFinal}`;
+
+                            let cor = skuData.Cor || "Indefinida";
+
+                            let skuDiv = document.createElement("div");
+                            skuDiv.classList.add("sku");
+                            skuDiv.innerHTML = `
+                                <h3>${sku}</h3>
+                                <div class="img-container">
+                                    <img src="" id="img-${sku}" class="img-placeholder" alt="Imagem do Produto" onclick="abrirImagem(this)">
+                                </div>
+                                <p><strong>Cor:</strong> ${cor}</p>
+                                <p><strong>Grade:</strong> ${grade}</p>
+                                <p><strong>Preço:</strong> ${valor}</p>
+                            `;
+                            skuScroll.appendChild(skuDiv);
+
+                            const imageRef = storageRef(storage, imagemPath);
+                            getDownloadURL(imageRef)
+                                .then((url) => {
+                                    document.getElementById(`img-${sku}`).src = url;
+                                })
+                                .catch(() => {
+                                    document.getElementById(`img-${sku}`).src = "caminho/para/imagem/fallback.jpg";
+                                });
+                        }
+                        catalogoDiv.appendChild(spuDiv);
                     }
                 }
             });
         }
 
-        document.getElementById("categorias").addEventListener("change", carregarProdutos);
-        document.getElementById("subcategorias").addEventListener("change", carregarProdutos);
-        document.getElementById("spuBusca").addEventListener("input", carregarProdutos);
+        document.getElementById("categorias").addEventListener("change", () => {
+            carregarProdutos();
+        });
+        document.getElementById("subcategorias").addEventListener("change", () => {
+            carregarProdutos();
+        });
+        document.getElementById("spuBusca").addEventListener("input", () => {
+            carregarProdutos();
+        });
+
+        window.abrirImagem = function (imgElement) {
+            const modal = document.getElementById("imageModal");
+            const modalImg = document.getElementById("modalImg");
+            modal.style.display = "flex";
+            modalImg.src = imgElement.src;
+        };
+
+        window.fecharModal = function () {
+            document.getElementById("imageModal").style.display = "none";
+        };
 
         document.addEventListener("DOMContentLoaded", () => {
             carregarCategorias();
@@ -207,6 +232,19 @@
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
+            cursor: pointer;
+        }
+        #imageModal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+        }
+        #modalImg {
+            max-width: 90%;
+            max-height: 90%;
         }
     </style>
 </head>
@@ -218,5 +256,10 @@
         <input type="text" id="spuBusca" placeholder="Buscar por SPU">
     </div>
     <div id="catalogo"></div>
+
+    <div id="imageModal">
+        <img id="modalImg">
+        <button onclick="fecharModal()">Fechar</button>
+    </div>
 </body>
 </html>
