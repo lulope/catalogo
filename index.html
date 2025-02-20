@@ -2,7 +2,7 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <!-- Impede o zoom padrão da página para que o gesto de pinça afete somente a imagem -->
+  <!-- Impede o zoom padrão da página -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Catálogo de Produtos</title>
   <script type="module">
@@ -27,8 +27,9 @@
     const produtosRef = ref(database, "Produtos/SPU");
     const categoriasRef = ref(database, "Produtos/Categorias");
 
-    // Variáveis globais para o zoom via ajuste de width/height
+    // Variáveis para controle do zoom via botões e pinch-to-zoom
     let originalWidth = 0, originalHeight = 0;
+    let initialScale = 1; // Escala mínima (definida quando a imagem é carregada)
     let currentScale = 1;
     let initialDistance = 0;
 
@@ -36,10 +37,8 @@
       get(categoriasRef).then((snapshot) => {
         const categoriasSelect = document.getElementById("categorias");
         categoriasSelect.innerHTML = "<option value=''>Selecione a Categoria</option>";
-        
         const subcategoriasSelect = document.getElementById("subcategorias");
         subcategoriasSelect.innerHTML = "<option value=''>Selecione a Subcategoria</option>";
-        
         const categorias = snapshot.val();
         if (categorias) {
           for (let categoria in categorias) {
@@ -56,7 +55,6 @@
       const categoriaSelecionada = this.value;
       const subcategoriasSelect = document.getElementById("subcategorias");
       subcategoriasSelect.innerHTML = "<option value=''>Selecione a Subcategoria</option>";
-
       if (categoriaSelecionada) {
         get(ref(database, `Produtos/Categorias/${categoriaSelecionada}/Subcategoria`))
           .then(snapshot => {
@@ -78,29 +76,23 @@
       const categoriaSelecionada = document.getElementById("categorias").value;
       const subcategoriaSelecionada = document.getElementById("subcategorias").value;
       const spuBusca = document.getElementById("spuBusca").value.trim().toLowerCase();
-
       get(produtosRef).then((snapshot) => {
         const catalogoDiv = document.getElementById("catalogo");
         const produtos = snapshot.val();
         catalogoDiv.innerHTML = "";
-
         if (produtos) {
           for (let spu in produtos) {
             let produto = produtos[spu];
             if (!produto.SKU) continue; // Exibe somente se houver variações
-
             let categoria = produto.Categoria || "";
             let subcategoria = produto.Subcategoria || "";
-
             if ((categoriaSelecionada && categoria !== categoriaSelecionada) ||
                 (subcategoriaSelecionada && subcategoria !== subcategoriaSelecionada) ||
                 (spuBusca && !spu.toLowerCase().includes(spuBusca))) {
               continue;
             }
-
             let headerText = `${spu} | ${categoria}`;
             if (subcategoria) headerText += ` | ${subcategoria}`;
-
             let spuDiv = document.createElement("div");
             spuDiv.classList.add("spu");
             spuDiv.innerHTML = `
@@ -109,20 +101,15 @@
                 <div class="sku-scroll"></div>
               </div>
             `;
-
             let skuScroll = spuDiv.querySelector(".sku-scroll");
-
             for (let sku in produto.SKU) {
               let skuData = produto.SKU[sku];
               let valor = skuData.Valor ? `R$ ${skuData.Valor}` : "Indisponível";
               let imagemPath = `CATÁLOGO/${sku}.jpg`;
-
               let tamanhoInicial = skuData.Inicio || "Indefinido";
               let tamanhoFinal = skuData.Fim || "Indefinido";
               let grade = `${tamanhoInicial} ao ${tamanhoFinal}`;
-
               let cor = skuData.Cor || "Indefinida";
-
               let skuDiv = document.createElement("div");
               skuDiv.classList.add("sku");
               skuDiv.innerHTML = `
@@ -135,7 +122,6 @@
                 <p><strong>Preço:</strong> ${valor}</p>
               `;
               skuScroll.appendChild(skuDiv);
-
               const imageRef = storageRef(storage, imagemPath);
               getDownloadURL(imageRef)
                 .then((url) => {
@@ -154,26 +140,37 @@
     document.getElementById("subcategorias").addEventListener("change", carregarProdutos);
     document.getElementById("spuBusca").addEventListener("input", carregarProdutos);
 
-    // Abre o modal com a imagem e centraliza-a
+    // Atualiza a posição do conteúdo do modal para centralizar a imagem
+    function updateModalImgPosition() {
+      const modalContent = document.getElementById("modalContent");
+      const modalImg = document.getElementById("modalImg");
+      let marginTop = (window.innerHeight - modalImg.offsetHeight) / 2;
+      let marginLeft = (window.innerWidth - modalImg.offsetWidth) / 2;
+      modalContent.style.marginTop = marginTop > 0 ? marginTop + "px" : "0px";
+      modalContent.style.marginLeft = marginLeft > 0 ? marginLeft + "px" : "0px";
+    }
+
+    // Abre o modal com a imagem, centralizando-a
     window.abrirImagem = function (imgElement) {
       const modal = document.getElementById("imageModal");
       const modalImg = document.getElementById("modalImg");
+      const modalContent = document.getElementById("modalContent");
       modal.style.display = "block";
       modalImg.src = imgElement.src;
-      // Quando a imagem carregar, calcula o tamanho inicial para centralizá-la e ajustar ao viewport
       modalImg.onload = function() {
         originalWidth = modalImg.naturalWidth;
         originalHeight = modalImg.naturalHeight;
-        // Calcula escala inicial para caber em 90% do viewport
         const vw = window.innerWidth * 0.9;
         const vh = window.innerHeight * 0.9;
         const scaleW = vw / originalWidth;
         const scaleH = vh / originalHeight;
         const initScale = Math.min(scaleW, scaleH, 1);
+        initialScale = initScale; // Define a escala mínima
         currentScale = initScale;
         modalImg.style.width = (originalWidth * initScale) + "px";
         modalImg.style.height = (originalHeight * initScale) + "px";
-      };
+        updateModalImgPosition();
+      }
     };
 
     // Fecha o modal
@@ -181,14 +178,14 @@
       document.getElementById("imageModal").style.display = "none";
     };
 
-    // Calcula a distância entre dois toques
+    // Calcula a distância entre dois toques (para pinch-to-zoom)
     function getDistance(touch1, touch2) {
       const dx = touch2.clientX - touch1.clientX;
       const dy = touch2.clientY - touch1.clientY;
       return Math.sqrt(dx * dx + dy * dy);
     }
 
-    // Eventos para pinch-to-zoom que atualizam width/height da imagem
+    // Eventos para pinch-to-zoom (dispositivos móveis)
     function adicionarEventosPinch() {
       const modalImg = document.getElementById("modalImg");
       modalImg.addEventListener("touchstart", function(e) {
@@ -197,24 +194,44 @@
           initialDistance = getDistance(e.touches[0], e.touches[1]);
         }
       }, { passive: false });
-
       modalImg.addEventListener("touchmove", function(e) {
         if (e.touches.length === 2) {
           e.preventDefault();
           const newDistance = getDistance(e.touches[0], e.touches[1]);
           const scaleFactor = newDistance / initialDistance;
           let newScale = currentScale * scaleFactor;
+          if (newScale < initialScale) newScale = initialScale;
           modalImg.style.width = (originalWidth * newScale) + "px";
           modalImg.style.height = (originalHeight * newScale) + "px";
+          updateModalImgPosition();
         }
       }, { passive: false });
-
       modalImg.addEventListener("touchend", function(e) {
         if (e.touches.length < 2) {
           currentScale = parseFloat(modalImg.style.width) / originalWidth;
           initialDistance = 0;
         }
       }, { passive: false });
+    }
+
+    // Funções para zoom via botões (desktop)
+    window.zoomIn = function() {
+      let newScale = currentScale * 1.2;
+      if (newScale > initialScale * 6) newScale = initialScale * 6;
+      currentScale = newScale;
+      updateModalImgSize();
+    };
+    window.zoomOut = function() {
+      let newScale = currentScale * 0.8;
+      if (newScale < initialScale) newScale = initialScale;
+      currentScale = newScale;
+      updateModalImgSize();
+    };
+    function updateModalImgSize() {
+      const modalImg = document.getElementById("modalImg");
+      modalImg.style.width = (originalWidth * currentScale) + "px";
+      modalImg.style.height = (originalHeight * currentScale) + "px";
+      updateModalImgPosition();
     }
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -291,13 +308,11 @@
       top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0,0,0,0.8);
       overflow: auto;
+      text-align: center;
     }
-    /* Container do modal centralizado */
+    /* Container do modal */
     #modalContent {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100%;
+      margin: 0 auto;
       position: relative;
     }
     #modalImg {
@@ -311,11 +326,32 @@
       background-color: red;
       color: white;
       border: none;
-      padding: 10px;
+      padding: 10px 14px;
       cursor: pointer;
       font-weight: bold;
-      border-radius: 5px;
+      border-radius: 8px;
       z-index: 1000;
+    }
+    /* Container para os botões de zoom fixado na parte inferior direita */
+    #zoomContainer {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      gap: 10px;
+      z-index: 1000;
+    }
+    /* Botões de zoom com layout moderno (fundo azul) */
+    #zoomContainer button {
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      padding: 12px 16px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 8px;
+      box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
     }
   </style>
 </head>
@@ -334,6 +370,10 @@
       <img id="modalImg" alt="Imagem ampliada">
     </div>
     <button id="closeModal" onclick="fecharModal()">Fechar</button>
+    <div id="zoomContainer">
+      <button id="zoomIn" onclick="zoomIn()">🔍+</button>
+      <button id="zoomOut" onclick="zoomOut()">🔍-</button>
+    </div>
   </div>
 </body>
 </html>
