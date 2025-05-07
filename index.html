@@ -2,7 +2,6 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <!-- Impede o zoom padrão da página -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Catálogo de Produtos</title>
   <script type="module">
@@ -26,14 +25,14 @@
     const storage = getStorage(app);
     const produtosRef = ref(database, "Produtos/SPU");
     const categoriasRef = ref(database, "Produtos/Categorias");
+    const senhaRef = ref(database, "SenhaCatalogo");
 
-    // Variáveis para controle do zoom via botões e pinch-to-zoom
     let originalWidth = 0, originalHeight = 0;
-    let initialScale = 1; // Escala mínima, definida no load da imagem
+    let initialScale = 1;
     let currentScale = 1;
     let initialDistance = 0;
+    let precosVisiveis = false;
 
-    // Carrega a logo a partir do Storage
     function carregarLogo() {
       const logoRef = storageRef(storage, "icons/logo.png");
       getDownloadURL(logoRef)
@@ -95,7 +94,7 @@
         if (produtos) {
           for (let spu in produtos) {
             let produto = produtos[spu];
-            if (!produto.SKU) continue; // Exibe somente se houver variações
+            if (!produto.SKU) continue;
             let categoria = produto.Categoria || "";
             let subcategoria = produto.Subcategoria || "";
             if ((categoriaSelecionada && categoria !== categoriaSelecionada) ||
@@ -131,7 +130,7 @@
                 </div>
                 <p><strong>Cor:</strong> ${cor}</p>
                 <p><strong>Grade:</strong> ${grade}</p>
-                <p><strong>Preço:</strong> ${valor}</p>
+                <p class="preco"><strong>Preço:</strong> ${valor}</p>
               `;
               skuScroll.appendChild(skuDiv);
               const imageRef = storageRef(storage, imagemPath);
@@ -152,7 +151,6 @@
     document.getElementById("subcategorias").addEventListener("change", carregarProdutos);
     document.getElementById("spuBusca").addEventListener("input", carregarProdutos);
 
-    // Atualiza a posição do conteúdo do modal para centralizar a imagem
     function updateModalImgPosition() {
       const modalContent = document.getElementById("modalContent");
       const modalImg = document.getElementById("modalImg");
@@ -162,7 +160,6 @@
       modalContent.style.marginLeft = marginLeft > 0 ? marginLeft + "px" : "0px";
     }
 
-    // Abre o modal com a imagem e centraliza-a
     window.abrirImagem = function (imgElement) {
       const modal = document.getElementById("imageModal");
       const modalImg = document.getElementById("modalImg");
@@ -177,7 +174,7 @@
         const scaleW = vw / originalWidth;
         const scaleH = vh / originalHeight;
         const initScale = Math.min(scaleW, scaleH, 1);
-        initialScale = initScale; // Define a escala mínima (zoom inicial)
+        initialScale = initScale;
         currentScale = initScale;
         modalImg.style.width = (originalWidth * initScale) + "px";
         modalImg.style.height = (originalHeight * initScale) + "px";
@@ -185,19 +182,16 @@
       }
     };
 
-    // Fecha o modal
     window.fecharModal = function () {
       document.getElementById("imageModal").style.display = "none";
     };
 
-    // Calcula a distância entre dois toques (para pinch-to-zoom)
     function getDistance(touch1, touch2) {
       const dx = touch2.clientX - touch1.clientX;
       const dy = touch2.clientY - touch1.clientY;
       return Math.sqrt(dx * dx + dy * dy);
     }
 
-    // Eventos para pinch-to-zoom (dispositivos móveis)
     function adicionarEventosPinch() {
       const modalImg = document.getElementById("modalImg");
       modalImg.addEventListener("touchstart", function(e) {
@@ -227,7 +221,6 @@
       }, { passive: false });
     }
 
-    // Funções para zoom via botões (desktop)
     window.zoomIn = function() {
       let newScale = currentScale * 1.2;
       if (newScale > initialScale * 6) newScale = initialScale * 6;
@@ -247,6 +240,39 @@
       updateModalImgPosition();
     }
 
+    function togglePrecos() {
+      console.log("Botão togglePreco clicado, precosVisiveis:", precosVisiveis);
+      const botaoPreco = document.getElementById("togglePreco");
+      if (precosVisiveis) {
+        document.querySelectorAll(".preco").forEach(el => el.style.display = "none");
+        botaoPreco.textContent = "🔒";
+        precosVisiveis = false;
+      } else {
+        const senha = prompt("Digite a senha para mostrar os preços:");
+        console.log("Senha inserida:", senha);
+        if (senha) {
+          get(senhaRef).then((snapshot) => {
+            const senhaCorreta = snapshot.val();
+            console.log("Senha do Firebase:", senhaCorreta);
+            if (senha === senhaCorreta) {
+              document.querySelectorAll(".preco").forEach(el => el.style.display = "block");
+              botaoPreco.textContent = "🔓";
+              precosVisiveis = true;
+            } else {
+              alert("Senha incorreta!");
+            }
+          }).catch((error) => {
+            console.error("Erro ao verificar senha:", error);
+            alert("Erro ao verificar senha. Tente novamente.");
+          });
+        } else {
+          console.log("Nenhuma senha inserida");
+        }
+      }
+    }
+
+    document.getElementById("togglePreco").addEventListener("click", togglePrecos);
+
     document.addEventListener("DOMContentLoaded", () => {
       carregarLogo();
       carregarCategorias();
@@ -259,7 +285,7 @@
       font-family: Arial, sans-serif;
       background-color: #ffe0f0;
       margin: 0;
-      padding-top: 120px; /* Espaço para o cabeçalho fixo */
+      padding-top: 120px;
     }
     header {
       position: fixed;
@@ -285,9 +311,18 @@
       text-align: center;
       margin: 20px;
     }
-    select, input {
+    select, input, button {
       padding: 10px;
       margin: 5px;
+    }
+    #togglePreco {
+      font-size: 18px; /* Aumenta o tamanho do ícone */
+      width: 40px; /* Define um tamanho fixo para o botão */
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
     }
     .spu {
       background: white;
@@ -331,7 +366,6 @@
       object-fit: contain;
       cursor: pointer;
     }
-    /* Modal de imagem */
     #imageModal {
       display: none;
       position: fixed;
@@ -339,9 +373,8 @@
       background: rgba(0,0,0,0.8);
       overflow: auto;
       text-align: center;
-      z-index: 2000; /* Maior que o cabeçalho */
+      z-index: 2000;
     }
-    /* Container do modal */
     #modalContent {
       margin: 0 auto;
       position: relative;
@@ -349,7 +382,6 @@
     #modalImg {
       transition: width 0.2s, height 0.2s;
     }
-    /* Botão de fechar fixo no topo da tela */
     #closeModal {
       position: fixed;
       top: 10px;
@@ -363,7 +395,6 @@
       border-radius: 8px;
       z-index: 2100;
     }
-    /* Container para os botões de zoom fixado na parte inferior direita */
     #zoomContainer {
       position: fixed;
       bottom: 20px;
@@ -372,7 +403,6 @@
       gap: 10px;
       z-index: 2100;
     }
-    /* Botões de zoom modernos */
     #zoomContainer button {
       background-color: #007bff;
       color: #fff;
@@ -383,6 +413,9 @@
       font-weight: bold;
       border-radius: 8px;
       box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
+    }
+    .preco {
+      display: none;
     }
   </style>
 </head>
@@ -395,10 +428,9 @@
     <select id="categorias"></select>
     <select id="subcategorias"></select>
     <input type="text" id="spuBusca" placeholder="Buscar por SPU">
+    <button id="togglePreco">🔒</button>
   </div>
   <div id="catalogo"></div>
-
-  <!-- Modal de imagem -->
   <div id="imageModal">
     <div id="modalContent">
       <img id="modalImg" alt="Imagem ampliada">
