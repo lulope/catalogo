@@ -1,445 +1,400 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Catálogo de Produtos</title>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-app.js";
-    import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-database.js";
-    import { getStorage, ref as storageRef, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-storage.js";
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Catálogo de Produtos</title>
+<style>
+body {
+  font-family: "Poppins", Arial, sans-serif;
+  background: #ffe0f0;
+  margin: 0;
+  padding-top: 120px;
+}
+header {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  z-index: 1000;
+  text-align: center;
+  padding: 10px 0;
+}
+header img#logo { display: block; margin: 0 auto; height: 60px; }
+header h1 { margin: 5px 0 0 0; font-size: 24px; color: #d63384; font-weight: 600; }
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBlLB2K6Sj9kQ9pVAu7rt-Db0jsC-hyvmU",
-      authDomain: "applulope.firebaseapp.com",
-      databaseURL: "https://applulope-default-rtdb.firebaseio.com",
-      projectId: "applulope",
-      storageBucket: "applulope.appspot.com",
-      messagingSenderId: "327504288727",
-      appId: "1:327504288727:web:96e7bfc239cf9337c9c992",
-      measurementId: "G-KNTVRE6P08"
-    };
+.filters {
+  text-align: center;
+  margin: 20px auto;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.filters select,
+.filters input,
+.filters button {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 10px 14px;
+  border: 2px solid #fff;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(6px);
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.08);
+  font-size: 15px;
+  color: #333;
+  outline: none;
+  transition: all 0.3s ease;
+  width: 220px;
+}
+.filters select:focus,
+.filters input:focus,
+.filters button:focus {
+  border-color: #d63384;
+  box-shadow: 0 0 8px rgba(214, 51, 132, 0.5);
+}
+.filters input[type="text"] {
+  background-image: url('data:image/svg+xml;utf8,<svg fill="%23d63384" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 2a8 8 0 015.29 13.71l4 4a1 1 0 01-1.42 1.42l-4-4A8 8 0 1110 2zm0 2a6 6 0 100 12A6 6 0 0010 4z"/></svg>');
+  background-repeat: no-repeat;
+  background-size: 18px;
+  background-position: 10px center;
+  padding-left: 35px;
+}
+.filters select {
+  background-image: url('data:image/svg+xml;utf8,<svg fill="%23d63384" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>');
+  background-repeat: no-repeat;
+  background-size: 16px;
+  background-position: calc(100% - 12px) center;
+  cursor: pointer;
+}
 
-    const app = initializeApp(firebaseConfig);
-    const database = getDatabase(app);
-    const storage = getStorage(app);
-    const produtosRef = ref(database, "Produtos/SPU");
-    const categoriasRef = ref(database, "Produtos/Categorias");
-    const senhaRef = ref(database, "SenhaCatalogo");
+/* ===== Catálogo ===== */
+#catalogo {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+  padding: 20px;
+  justify-items: center;
+}
+.spu {
+  background: white;
+  padding: 15px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  width: 250px;
+  min-height: 450px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.2s ease;
+}
+.spu:hover {
+  transform: translateY(-5px);
+  box-shadow: 0px 6px 12px rgba(214, 51, 132, 0.15);
+}
+.carousel-container {
+  position: relative;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:#fff;
+  border-radius:12px;
+  overflow:hidden;
+  width:100%;
+  height:200px;
+}
+.carousel-image {
+  width:200px;
+  height:200px;
+  object-fit:contain;
+  background:#fff;
+  border-radius:10px;
+  cursor:pointer;
+  margin:auto;
+}
+.carousel-btn {
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  background:rgba(214,51,132,0.7);
+  border:none;
+  color:white;
+  font-size:22px;
+  font-weight:bold;
+  cursor:pointer;
+  border-radius:50%;
+  width:36px;
+  height:36px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.3);
+}
+.carousel-btn:hover{ background:rgba(214,51,132,1);}
+.carousel-btn.prev{ left:10px; }
+.carousel-btn.next{ right:10px; }
 
-    let originalWidth = 0, originalHeight = 0;
-    let initialScale = 1;
-    let currentScale = 1;
-    let initialDistance = 0;
-    let precosVisiveis = false;
+.thumbs-container {
+  display:flex;
+  justify-content:center;
+  gap:6px;
+  margin-top:10px;
+  flex-wrap:wrap;
+}
+.thumb {
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  object-fit:cover;
+  border:2px solid transparent;
+  cursor:pointer;
+  transition: transform 0.2s, border 0.2s;
+}
+.thumb:hover { transform: scale(1.1); }
+.thumb.active { border: 2px solid #d63384; transform: scale(1.1); }
+.loader {
+  border:4px solid #f3f3f3;
+  border-top:4px solid #d63384;
+  border-radius:50%;
+  width:40px;
+  height:40px;
+  animation:spin 1s linear infinite;
+  position:absolute;
+}
+@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
 
-    function carregarLogo() {
-      const logoRef = storageRef(storage, "icons/logo.png");
-      getDownloadURL(logoRef)
-        .then((url) => {
-          document.getElementById("logo").src = url;
-        })
-        .catch((error) => {
-          console.error("Erro ao carregar logo", error);
-        });
-    }
+/* ===== Etiquetas ===== */
+.info-tags {
+  display: flex;
+  flex-direction: column; /* Cor em cima, linha inferior abaixo */
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.linha-inferior {
+  display: flex;
+  gap: 8px;
+}
+.info-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.info-tag.cor { background: #fce4ec; color: #c2185b; }
+.info-tag.grade { background: #ede7f6; color: #512da8; }
+.info-tag.preco { background: #e8f5e9; color: #2e7d32; display:none; }
+.info-tag i { font-style: normal; font-weight: bold; }
 
-    function carregarCategorias() {
-      get(categoriasRef).then((snapshot) => {
-        const categoriasSelect = document.getElementById("categorias");
-        categoriasSelect.innerHTML = "<option value=''>Selecione a Categoria</option>";
-        const subcategoriasSelect = document.getElementById("subcategorias");
-        subcategoriasSelect.innerHTML = "<option value=''>Selecione a Subcategoria</option>";
-        const categorias = snapshot.val();
-        if (categorias) {
-          for (let categoria in categorias) {
-            let option = document.createElement("option");
-            option.value = categoria;
-            option.textContent = categoria;
-            categoriasSelect.appendChild(option);
-          }
-        }
-      });
-    }
-
-    document.getElementById("categorias").addEventListener("change", function() {
-      const categoriaSelecionada = this.value;
-      const subcategoriasSelect = document.getElementById("subcategorias");
-      subcategoriasSelect.innerHTML = "<option value=''>Selecione a Subcategoria</option>";
-      if (categoriaSelecionada) {
-        get(ref(database, `Produtos/Categorias/${categoriaSelecionada}/Subcategoria`))
-          .then(snapshot => {
-            const subcategorias = snapshot.val();
-            if (subcategorias) {
-              for (let subcategoria in subcategorias) {
-                let option = document.createElement("option");
-                option.value = subcategoria;
-                option.textContent = subcategoria;
-                subcategoriasSelect.appendChild(option);
-              }
-            }
-          });
-      }
-      carregarProdutos();
-    });
-
-    function carregarProdutos() {
-      const categoriaSelecionada = document.getElementById("categorias").value;
-      const subcategoriaSelecionada = document.getElementById("subcategorias").value;
-      const spuBusca = document.getElementById("spuBusca").value.trim().toLowerCase();
-      get(produtosRef).then((snapshot) => {
-        const catalogoDiv = document.getElementById("catalogo");
-        const produtos = snapshot.val();
-        catalogoDiv.innerHTML = "";
-        if (produtos) {
-          for (let spu in produtos) {
-            let produto = produtos[spu];
-            if (!produto.SKU) continue;
-            let categoria = produto.Categoria || "";
-            let subcategoria = produto.Subcategoria || "";
-            if ((categoriaSelecionada && categoria !== categoriaSelecionada) ||
-                (subcategoriaSelecionada && subcategoria !== subcategoriaSelecionada) ||
-                (spuBusca && !spu.toLowerCase().includes(spuBusca))) {
-              continue;
-            }
-            let headerText = `${spu} | ${categoria}`;
-            if (subcategoria) headerText += ` | ${subcategoria}`;
-            let spuDiv = document.createElement("div");
-            spuDiv.classList.add("spu");
-            spuDiv.innerHTML = `
-              <h2>${headerText}</h2>
-              <div class="sku-container">
-                <div class="sku-scroll"></div>
-              </div>
-            `;
-            let skuScroll = spuDiv.querySelector(".sku-scroll");
-            for (let sku in produto.SKU) {
-              let skuData = produto.SKU[sku];
-              let valor = skuData.Valor ? `R$ ${skuData.Valor}` : "Indisponível";
-              let imagemPath = `CATÁLOGO/${sku}.jpg`;
-              let tamanhoInicial = skuData.Inicio || "Indefinido";
-              let tamanhoFinal = skuData.Fim || "Indefinido";
-              let grade = `${tamanhoInicial} ao ${tamanhoFinal}`;
-              let cor = skuData.Cor || "Indefinida";
-              let skuDiv = document.createElement("div");
-              skuDiv.classList.add("sku");
-              skuDiv.innerHTML = `
-                <h3>${sku}</h3>
-                <div class="img-container">
-                  <img src="" id="img-${sku}" class="img-placeholder" alt="Imagem do Produto" onclick="abrirImagem(this)">
-                </div>
-                <p><strong>Cor:</strong> ${cor}</p>
-                <p><strong>Grade:</strong> ${grade}</p>
-                <p class="preco"><strong>Preço:</strong> ${valor}</p>
-              `;
-              skuScroll.appendChild(skuDiv);
-              const imageRef = storageRef(storage, imagemPath);
-              getDownloadURL(imageRef)
-                .then((url) => {
-                  document.getElementById(`img-${sku}`).src = url;
-                })
-                .catch(() => {
-                  document.getElementById(`img-${sku}`).src = "caminho/para/imagem/fallback.jpg";
-                });
-            }
-            catalogoDiv.appendChild(spuDiv);
-          }
-        }
-      });
-    }
-
-    document.getElementById("subcategorias").addEventListener("change", carregarProdutos);
-    document.getElementById("spuBusca").addEventListener("input", carregarProdutos);
-
-    function updateModalImgPosition() {
-      const modalContent = document.getElementById("modalContent");
-      const modalImg = document.getElementById("modalImg");
-      let marginTop = (window.innerHeight - modalImg.offsetHeight) / 2;
-      let marginLeft = (window.innerWidth - modalImg.offsetWidth) / 2;
-      modalContent.style.marginTop = marginTop > 0 ? marginTop + "px" : "0px";
-      modalContent.style.marginLeft = marginLeft > 0 ? marginLeft + "px" : "0px";
-    }
-
-    window.abrirImagem = function (imgElement) {
-      const modal = document.getElementById("imageModal");
-      const modalImg = document.getElementById("modalImg");
-      const modalContent = document.getElementById("modalContent");
-      modal.style.display = "block";
-      modalImg.src = imgElement.src;
-      modalImg.onload = function() {
-        originalWidth = modalImg.naturalWidth;
-        originalHeight = modalImg.naturalHeight;
-        const vw = window.innerWidth * 0.9;
-        const vh = window.innerHeight * 0.9;
-        const scaleW = vw / originalWidth;
-        const scaleH = vh / originalHeight;
-        const initScale = Math.min(scaleW, scaleH, 1);
-        initialScale = initScale;
-        currentScale = initScale;
-        modalImg.style.width = (originalWidth * initScale) + "px";
-        modalImg.style.height = (originalHeight * initScale) + "px";
-        updateModalImgPosition();
-      }
-    };
-
-    window.fecharModal = function () {
-      document.getElementById("imageModal").style.display = "none";
-    };
-
-    function getDistance(touch1, touch2) {
-      const dx = touch2.clientX - touch1.clientX;
-      const dy = touch2.clientY - touch1.clientY;
-      return Math.sqrt(dx * dx + dy * dy);
-    }
-
-    function adicionarEventosPinch() {
-      const modalImg = document.getElementById("modalImg");
-      modalImg.addEventListener("touchstart", function(e) {
-        if (e.touches.length === 2) {
-          e.preventDefault();
-          initialDistance = getDistance(e.touches[0], e.touches[1]);
-        }
-      }, { passive: false });
-      modalImg.addEventListener("touchmove", function(e) {
-        if (e.touches.length === 2) {
-          e.preventDefault();
-          const newDistance = getDistance(e.touches[0], e.touches[1]);
-          const scaleFactor = newDistance / initialDistance;
-          let newScale = currentScale * scaleFactor;
-          if (newScale < initialScale) newScale = initialScale;
-          if (newScale > initialScale * 6) newScale = initialScale * 6;
-          modalImg.style.width = (originalWidth * newScale) + "px";
-          modalImg.style.height = (originalHeight * newScale) + "px";
-          updateModalImgPosition();
-        }
-      }, { passive: false });
-      modalImg.addEventListener("touchend", function(e) {
-        if (e.touches.length < 2) {
-          currentScale = parseFloat(modalImg.style.width) / originalWidth;
-          initialDistance = 0;
-        }
-      }, { passive: false });
-    }
-
-    window.zoomIn = function() {
-      let newScale = currentScale * 1.2;
-      if (newScale > initialScale * 6) newScale = initialScale * 6;
-      currentScale = newScale;
-      updateModalImgSize();
-    };
-    window.zoomOut = function() {
-      let newScale = currentScale * 0.8;
-      if (newScale < initialScale) newScale = initialScale;
-      currentScale = newScale;
-      updateModalImgSize();
-    };
-    function updateModalImgSize() {
-      const modalImg = document.getElementById("modalImg");
-      modalImg.style.width = (originalWidth * currentScale) + "px";
-      modalImg.style.height = (originalHeight * currentScale) + "px";
-      updateModalImgPosition();
-    }
-
-    function togglePrecos() {
-      console.log("Botão togglePreco clicado, precosVisiveis:", precosVisiveis);
-      const botaoPreco = document.getElementById("togglePreco");
-      if (precosVisiveis) {
-        document.querySelectorAll(".preco").forEach(el => el.style.display = "none");
-        botaoPreco.textContent = "🔒";
-        precosVisiveis = false;
-      } else {
-        const senha = prompt("Digite a senha para mostrar os preços:");
-        console.log("Senha inserida:", senha);
-        if (senha) {
-          get(senhaRef).then((snapshot) => {
-            const senhaCorreta = snapshot.val();
-            console.log("Senha do Firebase:", senhaCorreta);
-            if (senha === senhaCorreta) {
-              document.querySelectorAll(".preco").forEach(el => el.style.display = "block");
-              botaoPreco.textContent = "🔓";
-              precosVisiveis = true;
-            } else {
-              alert("Senha incorreta!");
-            }
-          }).catch((error) => {
-            console.error("Erro ao verificar senha:", error);
-            alert("Erro ao verificar senha. Tente novamente.");
-          });
-        } else {
-          console.log("Nenhuma senha inserida");
-        }
-      }
-    }
-
-    document.getElementById("togglePreco").addEventListener("click", togglePrecos);
-
-    document.addEventListener("DOMContentLoaded", () => {
-      carregarLogo();
-      carregarCategorias();
-      carregarProdutos();
-      adicionarEventosPinch();
-    });
-  </script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #ffe0f0;
-      margin: 0;
-      padding-top: 120px;
-    }
-    header {
-      position: fixed;
-      top: 0;
-      width: 100%;
-      background: #fff;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      z-index: 1000;
-      text-align: center;
-      padding: 10px 0;
-    }
-    header img#logo {
-      display: block;
-      margin: 0 auto;
-      height: 60px;
-    }
-    header h1 {
-      margin: 5px 0 0 0;
-      font-size: 24px;
-      color: #d63384;
-    }
-    .filters {
-      text-align: center;
-      margin: 20px;
-    }
-    select, input, button {
-      padding: 10px;
-      margin: 5px;
-    }
-    #togglePreco {
-      font-size: 18px; /* Aumenta o tamanho do ícone */
-      width: 40px; /* Define um tamanho fixo para o botão */
-      height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 8px;
-    }
-    .spu {
-      background: white;
-      padding: 20px;
-      margin: 10px auto;
-      border-radius: 10px;
-      box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
-      max-width: 90%;
-    }
-    .sku-container {
-      overflow-x: auto;
-      white-space: nowrap;
-      display: flex;
-      gap: 10px;
-      padding: 10px 0;
-    }
-    .sku-scroll {
-      display: flex;
-      gap: 10px;
-    }
-    .sku {
-      background: #fff0f5;
-      padding: 10px;
-      border-radius: 8px;
-      text-align: center;
-      width: 200px;
-      flex-shrink: 0;
-    }
-    .img-container {
-      width: 100%;
-      height: 150px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: #fff;
-      border-radius: 8px;
-    }
-    .img-container img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-      cursor: pointer;
-    }
-    #imageModal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
-      overflow: auto;
-      text-align: center;
-      z-index: 2000;
-    }
-    #modalContent {
-      margin: 0 auto;
-      position: relative;
-    }
-    #modalImg {
-      transition: width 0.2s, height 0.2s;
-    }
-    #closeModal {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      background-color: red;
-      color: white;
-      border: none;
-      padding: 10px 14px;
-      cursor: pointer;
-      font-weight: bold;
-      border-radius: 8px;
-      z-index: 2100;
-    }
-    #zoomContainer {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      display: flex;
-      gap: 10px;
-      z-index: 2100;
-    }
-    #zoomContainer button {
-      background-color: #007bff;
-      color: #fff;
-      border: none;
-      padding: 12px 16px;
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: bold;
-      border-radius: 8px;
-      box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
-    }
-    .preco {
-      display: none;
-    }
-  </style>
+/* ===== Modal ===== */
+#imageModal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);text-align:center;z-index:2000;overflow:auto;}
+#modalContent{margin:0 auto;position:relative;}
+#modalImg{transition:width 0.2s,height 0.2s;}
+#closeModal{position:fixed;top:10px;right:10px;background:red;color:white;border:none;padding:10px 14px;cursor:pointer;font-weight:bold;border-radius:8px;z-index:2100;}
+#zoomContainer{position:fixed;bottom:20px;right:20px;display:flex;gap:10px;z-index:2100;}
+#zoomContainer button{background:#007bff;color:#fff;border:none;padding:12px 16px;cursor:pointer;font-size:16px;font-weight:bold;border-radius:8px;box-shadow:0px 4px 6px rgba(0,0,0,0.1);}
+</style>
 </head>
 <body>
-  <header>
-    <img id="logo" alt="Logo">
-    <h1>Catálogo de Produtos</h1>
-  </header>
-  <div class="filters">
-    <select id="categorias"></select>
-    <select id="subcategorias"></select>
-    <input type="text" id="spuBusca" placeholder="Buscar por SPU">
-    <button id="togglePreco">🔒</button>
+<header>
+  <img id="logo" alt="Logo">
+  <h1>Catálogo de Produtos</h1>
+</header>
+
+<div class="filters">
+  <select id="categorias"></select>
+  <select id="subcategorias"></select>
+  <input type="text" id="spuBusca" placeholder="Buscar por SPU">
+  <button id="togglePreco">🔒</button>
+</div>
+
+<div id="catalogo"></div>
+
+<div id="imageModal">
+  <div id="modalContent">
+    <img id="modalImg">
   </div>
-  <div id="catalogo"></div>
-  <div id="imageModal">
-    <div id="modalContent">
-      <img id="modalImg" alt="Imagem ampliada">
-    </div>
-    <button id="closeModal" onclick="fecharModal()">Fechar</button>
-    <div id="zoomContainer">
-      <button id="zoomIn" onclick="zoomIn()">🔍+</button>
-      <button id="zoomOut" onclick="zoomOut()">🔍-</button>
-    </div>
+  <button id="closeModal" onclick="document.getElementById('imageModal').style.display='none'">Fechar</button>
+  <div id="zoomContainer">
+    <button onclick="zoomIn()">🔍+</button>
+    <button onclick="zoomOut()">🔍-</button>
   </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-app.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-database.js";
+import { getStorage, ref as storageRef, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-storage.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBlLB2K6Sj9kQ9pVAu7rt-Db0jsC-hyvmU",
+  authDomain: "applulope.firebaseapp.com",
+  databaseURL: "https://applulope-default-rtdb.firebaseio.com",
+  projectId: "applulope",
+  storageBucket: "applulope.appspot.com",
+  messagingSenderId: "327504288727",
+  appId: "1:327504288727:web:96e7bfc239cf9337c9c992"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const storage = getStorage(app);
+
+const produtosRef = ref(db,"Produtos/SPU");
+const categoriasRef = ref(db,"Produtos/Categorias");
+const senhaRef = ref(db,"SenhaCatalogo");
+
+let precosVisiveis = false;
+
+// ===== Funções principais =====
+async function carregarLogo(){
+  const logoRef = storageRef(storage,"icons/logo.png");
+  getDownloadURL(logoRef).then(url=>document.getElementById("logo").src=url);
+}
+
+async function carregarCategorias(){
+  const snap = await get(categoriasRef);
+  const cats = snap.val();
+  const selectCat = document.getElementById("categorias");
+  selectCat.innerHTML = "<option value=''>Selecione a Categoria</option>";
+  const selectSub = document.getElementById("subcategorias");
+  selectSub.innerHTML = "<option value=''>Selecione a Subcategoria</option>";
+  if(cats) for(let c in cats){
+    let o = document.createElement("option"); o.value = c; o.textContent = c; selectCat.appendChild(o);
+  }
+}
+
+document.getElementById("categorias").addEventListener("change",async function(){
+  const val=this.value;
+  const selectSub=document.getElementById("subcategorias");
+  selectSub.innerHTML="<option value=''>Selecione a Subcategoria</option>";
+  if(val){
+    const snap=await get(ref(db,`Produtos/Categorias/${val}/Subcategoria`));
+    const subs=snap.val();
+    if(subs) for(let s in subs){
+      let o=document.createElement("option"); o.value=s; o.textContent=s; selectSub.appendChild(o);
+    }
+  }
+  carregarProdutos();
+});
+document.getElementById("subcategorias").addEventListener("change",carregarProdutos);
+document.getElementById("spuBusca").addEventListener("input",carregarProdutos);
+
+async function carregarProdutos(){
+  const cat=document.getElementById("categorias").value;
+  const sub=document.getElementById("subcategorias").value;
+  const busca=document.getElementById("spuBusca").value.toLowerCase();
+  const snap=await get(produtosRef);
+  const produtos=snap.val();
+  const catalogo=document.getElementById("catalogo");
+  catalogo.innerHTML="";
+  if(!produtos) return;
+
+  for(let spu in produtos){
+    const p=produtos[spu];
+    if(!p.SKU) continue;
+    if((cat&&p.Categoria!==cat)||(sub&&p.Subcategoria!==sub)||(busca&&!spu.toLowerCase().includes(busca))) continue;
+
+    const skuKeys=Object.keys(p.SKU);
+    let idx=0;
+    const div=document.createElement("div");
+    div.classList.add("spu");
+    div.innerHTML=`<h2>${spu} | ${p.Categoria||""}${p.Subcategoria?" | "+p.Subcategoria:""}</h2>`;
+
+    const carousel=document.createElement("div");
+    carousel.classList.add("carousel-container");
+    const loader=document.createElement("div");loader.classList.add("loader");
+    const img=document.createElement("img");img.classList.add("carousel-image");img.style.display="none";
+    carousel.append(loader,img);
+    const prev=document.createElement("button");prev.classList.add("carousel-btn","prev");prev.innerHTML="&#10094;";
+    const next=document.createElement("button");next.classList.add("carousel-btn","next");next.innerHTML="&#10095;";
+    carousel.append(prev,next);
+
+    const thumbs=document.createElement("div");thumbs.classList.add("thumbs-container");
+
+    // ===== Etiquetas =====
+    const tags=document.createElement("div");tags.classList.add("info-tags");
+    const corTag=document.createElement("div");corTag.classList.add("info-tag","cor");
+    corTag.innerHTML=`<i>🎨</i> <span class="cor-texto"></span>`;
+    const linhaInferior=document.createElement("div");linhaInferior.classList.add("linha-inferior");
+    const gradeTag=document.createElement("div");gradeTag.classList.add("info-tag","grade");
+    gradeTag.innerHTML=`<i>📏</i> <span class="grade-texto"></span>`;
+    const precoTag=document.createElement("div");precoTag.classList.add("info-tag","preco");
+    precoTag.innerHTML=`<i>💰</i> <span class="preco-texto"></span>`;
+    precoTag.style.display = precosVisiveis?"flex":"none";
+    linhaInferior.append(gradeTag,precoTag);
+    tags.append(corTag,linhaInferior);
+
+    skuKeys.forEach((sku,i)=>{
+      const t=document.createElement("img");t.classList.add("thumb");
+      getDownloadURL(storageRef(storage,`CATÁLOGO/${sku}.jpg`)).then(url=>t.src=url).catch(()=>t.src="fallback.jpg");
+      t.onclick=()=>{idx=i;atualizar(idx);};
+      thumbs.appendChild(t);
+    });
+
+    async function atualizar(i){
+      const sku=skuKeys[i];const d=p.SKU[sku];
+      corTag.querySelector(".cor-texto").textContent=d.Cor||"Indefinida";
+      gradeTag.querySelector(".grade-texto").textContent=`${d.Inicio||"?"} ao ${d.Fim||"?"}`;
+      precoTag.querySelector(".preco-texto").textContent=d.Valor?`R$ ${d.Valor}`:"Indisponível";
+      thumbs.querySelectorAll(".thumb").forEach((t,j)=>t.classList.toggle("active",i===j));
+      loader.style.display="block";img.style.display="none";
+      try{
+        img.src=await getDownloadURL(storageRef(storage,`CATÁLOGO/${sku}.jpg`));
+        img.onload=()=>{loader.style.display="none";img.style.display="block";};
+      }catch{
+        img.src="fallback.jpg";loader.style.display="none";img.style.display="block";
+      }
+    }
+    prev.onclick=()=>{idx=(idx-1+skuKeys.length)%skuKeys.length;atualizar(idx);};
+    next.onclick=()=>{idx=(idx+1)%skuKeys.length;atualizar(idx);};
+    div.append(carousel,thumbs,tags);
+    catalogo.appendChild(div);
+    atualizar(0);
+  }
+}
+
+// ===== Modal Zoom =====
+let ow=0,oh=0,is=1,cs=1,id=0;
+window.abrirModal=function(src){const modal=document.getElementById("imageModal");const modalImg=document.getElementById("modalImg");modal.style.display="block";modalImg.src=src;
+modalImg.onload=function(){ow=this.naturalWidth;oh=this.naturalHeight;const s=Math.min((window.innerWidth*0.9)/ow,(window.innerHeight*0.9)/oh,1);is=s;cs=s;this.style.width=ow*s+"px";this.style.height=oh*s+"px";};};
+window.fecharModal=function(){document.getElementById("imageModal").style.display="none";};
+window.zoomIn=function(){cs=Math.min(cs*1.2,is*6);document.getElementById("modalImg").style.width=ow*cs+"px";document.getElementById("modalImg").style.height=oh*cs+"px";};
+window.zoomOut=function(){cs=Math.max(cs*0.8,is);document.getElementById("modalImg").style.width=ow*cs+"px";document.getElementById("modalImg").style.height=oh*cs+"px";};
+
+// ===== Mostrar/Ocultar Preços com senha =====
+async function togglePrecos(){
+  const botao=document.getElementById("togglePreco");
+  if(precosVisiveis){
+    document.querySelectorAll(".preco").forEach(el=>el.style.display="none");
+    botao.textContent="🔒";
+    precosVisiveis=false;
+  }else{
+    const senha=prompt("Digite a senha para mostrar os preços:");
+    if(senha){
+      try{
+        const snap=await get(senhaRef);
+        if(snap.val()===senha){
+          document.querySelectorAll(".preco").forEach(el=>el.style.display="flex");
+          botao.textContent="🔓";
+          precosVisiveis=true;
+        }else{alert("Senha incorreta!");}
+      }catch{alert("Erro ao verificar senha.");}
+    }
+  }
+}
+document.getElementById("togglePreco").addEventListener("click",togglePrecos);
+
+// ===== Inicialização =====
+document.addEventListener("DOMContentLoaded",()=>{
+  carregarLogo();
+  carregarCategorias();
+  carregarProdutos();
+});
+</script>
 </body>
 </html>
